@@ -4,29 +4,25 @@
   "private": true,
   "description": "QuickStore - quick-commerce operating platform (warehouses, dark stores, inventory, procurement, orders, fulfillment, delivery)",
   "workspaces": [
-    "packages/*",
     "apps/api",
     "apps/admin-web",
     "apps/customer-web",
-    
     "apps/worker"
   ],
   "scripts": {
-    "build": "npm run build -w @quickstore/shared-types && npm run build -w @quickstore/api && npm run build -w @quickstore/admin-web",
+    "build": "npm run build -w @quickstore/api && npm run build -w @quickstore/admin-web && npm run build -w @quickstore/customer-web",
     "dev:api": "npm run start:dev -w @quickstore/api",
     "dev:web": "npm run dev -w @quickstore/admin-web",
     "db:generate": "prisma generate --schema database/prisma/schema.prisma",
     "db:migrate": "prisma migrate deploy --schema database/prisma/schema.prisma",
     "db:migrate:dev": "prisma migrate dev --schema database/prisma/schema.prisma",
-    "db:seed": "ts-node --transpile-only database/seed/seed.ts",
+    "db:seed": "ts-node --transpile-only --project apps/api/tsconfig.json apps/api/src/seed.ts",
     "test": "npm test -w @quickstore/api",
     "lint": "npm run lint --workspaces --if-present"
   },
-  "devDependencies": {
-    "prisma": "5.22.0"
-  },
   "dependencies": {
-    "@prisma/client": "5.22.0"
+    "@prisma/client": "5.22.0",
+    "prisma": "5.22.0"
   },
   "engines": {
     "node": ">=20"
