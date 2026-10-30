@@ -67,7 +67,9 @@ export class SyncService {
     if (!token) throw new UnauthorizedException('Missing device token');
     const device = await this.prisma.edgeDevice.findUnique({ where: { tokenHash: TokenService.hash(token) } });
     if (!device || !device.active) throw new UnauthorizedException('Unknown or revoked device');
-    await this.prisma.edgeDevice.update({ where: { id: device.id }, data: { lastSeenAt: new Date() } });
+    // Heartbeat timestamps need ~30 s resolution; writing them on every call would make
+    // one hot row the serialization point for all concurrent pushes from a store.
+    await this.touch(device.id, device.warehouseId);
     return device;
   }
 
@@ -88,7 +90,6 @@ export class SyncService {
       this.prisma.inventoryCount.findMany({ where: { warehouseId: storeId, status: 'OPEN' }, include: { items: { select: { id: true, skuId: true, batchId: true } } } }),
       this.prisma.stockTransfer.findMany({ where: { toWarehouseId: storeId, status: 'DISPATCHED' }, include: { items: true } }),
     ]);
-    await this.prisma.darkStore.updateMany({ where: { id: storeId }, data: { lastSyncAt: new Date() } });
     return {
       serverTime: new Date().toISOString(),
       deviceId: device.id,
@@ -114,8 +115,8 @@ export class SyncService {
       results.push(await this.applyOne(device, op));
       maxSeq = Math.max(maxSeq, op.sequence);
     }
-    await this.prisma.edgeDevice.update({ where: { id: device.id }, data: { lastSequence: BigInt(maxSeq) } });
-    await this.prisma.darkStore.updateMany({ where: { id: device.warehouseId }, data: { lastSyncAt: new Date() } });
+    // Monotonic: concurrent pushes can only move the high-water mark forward.
+    await this.prisma.$executeRaw`UPDATE edge_devices SET last_sequence = ${BigInt(maxSeq)} WHERE id = ${device.id}::uuid AND last_sequence < ${BigInt(maxSeq)}`;
     return { accepted: results.filter((r) => r.status === 'APPLIED').length, results, lastAcceptedSequence: maxSeq };
   }
 
@@ -184,6 +185,12 @@ export class SyncService {
       this.logger.warn(`sync conflict ${op.clientOpId}: ${e.message}`);
       return finish('CONFLICT', e.message);
     }
+  }
+
+  private async touch(deviceId: string, warehouseId: string) {
+    const stale = new Date(Date.now() - 30_000);
+    await this.prisma.edgeDevice.updateMany({ where: { id: deviceId, OR: [{ lastSeenAt: null }, { lastSeenAt: { lt: stale } }] }, data: { lastSeenAt: new Date() } });
+    await this.prisma.darkStore.updateMany({ where: { id: warehouseId, OR: [{ lastSyncAt: null }, { lastSyncAt: { lt: stale } }] }, data: { lastSyncAt: new Date() } });
   }
 
   listConflicts(actor: AuthContext, warehouseId?: string, status = 'OPEN') {

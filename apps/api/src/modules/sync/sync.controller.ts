@@ -7,6 +7,9 @@ import { PERMISSIONS as P } from '../../common/permissions';
 import { PushDto, RegisterDeviceDto, ResolveConflictDto } from './sync.dto';
 import { SyncService } from './sync.service';
 
+// Per-device push/snapshot budget; agents batch up to 500 operations per push.
+const SYNC_LIMIT = Number(process.env.SYNC_RATE_LIMIT_PER_MINUTE ?? 120);
+
 @ApiTags('sync')
 @Controller('sync')
 export class SyncController {
@@ -19,11 +22,11 @@ export class SyncController {
   revoke(@CurrentActor() a: AuthContext, @Param('id', ParseUUIDPipe) id: string) { return this.svc.revokeDevice(a, id); }
 
   @ApiHeader({ name: 'x-device-token', required: true })
-  @Public() @Throttle({ default: { limit: 120, ttl: 60_000 } }) @Get('snapshot')
+  @Public() @Throttle({ default: { limit: SYNC_LIMIT, ttl: 60_000 } }) @Get('snapshot')
   snapshot(@Headers('x-device-token') token?: string) { return this.svc.snapshot(token); }
 
   @ApiHeader({ name: 'x-device-token', required: true })
-  @Public() @Throttle({ default: { limit: 120, ttl: 60_000 } }) @Post('push') @HttpCode(200)
+  @Public() @Throttle({ default: { limit: SYNC_LIMIT, ttl: 60_000 } }) @Post('push') @HttpCode(200)
   push(@Headers('x-device-token') token: string | undefined, @Body() dto: PushDto) { return this.svc.push(token, dto); }
 
   @ApiBearerAuth() @RequirePermissions(P.SYNC_MANAGE) @Get('status')
