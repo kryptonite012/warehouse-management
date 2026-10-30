@@ -2,12 +2,9 @@
   "name": "@quickstore/worker",
   "version": "0.1.0",
   "private": true,
-  "main": "src/index.js",
+  "description": "Background job runner. Executes the API's job definitions with lease-based single-runner semantics.",
   "scripts": {
-    "start": "node src/index.js",
-    "test": "node --test test/"
-  },
-  "dependencies": {
-    "@prisma/client": "5.22.0"
+    "start": "node ../api/dist/worker.js",
+    "dev": "ts-node-dev --transpile-only ../api/src/worker.ts"
   }
 }
