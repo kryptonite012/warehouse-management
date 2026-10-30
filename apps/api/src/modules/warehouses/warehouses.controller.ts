@@ -2,7 +2,7 @@ import { Body, Controller, Get, Header, Param, ParseUUIDPipe, Patch, Post, Query
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthContext } from '../../common/auth-context';
 import { code128Svg, qrSvg } from '../../common/barcode';
-import { Actors, CurrentActor, RequirePermissions } from '../../common/decorators';
+import { CurrentActor, Public, RequirePermissions } from '../../common/decorators';
 import { PERMISSIONS as P } from '../../common/permissions';
 import {
   AssignSkuLocationDto, BulkLayoutDto, CreateLocationDto, CreateWarehouseDto, UpdateLocationDto, UpdateWarehouseDto, WarehouseListQuery,
@@ -71,12 +71,12 @@ export class WarehousesController {
     return this.svc.findByBarcode(a, barcode);
   }
 
-  @Get('labels/barcode.svg') @Actors('employee') @Header('Content-Type', 'image/svg+xml')
+  @Get('labels/barcode.svg') @Public() @Header('Content-Type', 'image/svg+xml')
   barcode(@Query('text') text: string) {
     return code128Svg(text);
   }
 
-  @Get('labels/qr.svg') @Actors('employee') @Header('Content-Type', 'image/svg+xml')
+  @Get('labels/qr.svg') @Public() @Header('Content-Type', 'image/svg+xml')
   qr(@Query('text') text: string) {
     return qrSvg(String(text).slice(0, 512));
   }
