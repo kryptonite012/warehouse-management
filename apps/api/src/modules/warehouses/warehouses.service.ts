@@ -90,8 +90,20 @@ export class WarehousesService {
     const locations = await this.prisma.storageLocation.findMany({
       where: { warehouseId },
       orderBy: [{ level: 'asc' }, { fullCode: 'asc' }],
-      include: { skuAssignments: { select: { skuId: true } } },
+      include: { skuAssignments: { select: { skuId: true }, orderBy: { isPrimary: 'desc' } } },
     });
+    // Occupancy is derived from the ledger (on-hand + quarantined + damaged units of the SKUs
+    // slotted in each bin) rather than a separately maintained counter that could drift.
+    const stock = await this.prisma.$queryRaw<{ sku_id: string; units: number }[]>`
+      SELECT sku_id, SUM(on_hand + quarantined + damaged)::int AS units FROM inventory_balances
+      WHERE warehouse_id = ${warehouseId}::uuid GROUP BY sku_id`;
+    const unitsBySku = new Map(stock.map((r) => [r.sku_id, r.units]));
+    const binOfSku = new Map<string, string>();
+    for (const l of locations) for (const a of l.skuAssignments) if (!binOfSku.has(a.skuId)) binOfSku.set(a.skuId, l.id);
+    const occupiedByBin = new Map<string, number>();
+    for (const [skuId, binId] of binOfSku) occupiedByBin.set(binId, (occupiedByBin.get(binId) ?? 0) + (unitsBySku.get(skuId) ?? 0));
+    for (const l of locations) l.occupiedUnits = occupiedByBin.get(l.id) ?? 0;
+
     const byParent = new Map<string | null, any[]>();
     for (const l of locations) {
       const node = {
