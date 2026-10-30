@@ -9,6 +9,7 @@ import { MetricsMiddleware, OpsController } from './metrics';
 import { AuthModule } from './modules/auth/auth.module';
 import { OrganizationModule } from './modules/organization/organization.module';
 import { UsersModule } from './modules/users/users.module';
+import { WarehousesModule } from './modules/warehouses/warehouses.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule,
     UsersModule,
     OrganizationModule,
+    WarehousesModule,
   ],
   controllers: [OpsController],
   providers: [
