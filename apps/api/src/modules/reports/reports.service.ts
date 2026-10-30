@@ -69,8 +69,17 @@ export class ReportsService {
              SUM((SELECT COALESCE(SUM(picked_qty),0) FROM picking_items i WHERE i.picking_task_id = t.id))::int AS units
       FROM picking_tasks t WHERE t.organization_id = ${org}::uuid AND t.completed_at >= ${today} ${this.scope(actor, 't.warehouse_id', warehouseId)}`;
     const [util] = await this.prisma.$queryRaw<any[]>`
-      SELECT CASE WHEN SUM(capacity_units) > 0 THEN SUM(occupied_units)::float / SUM(capacity_units) END AS utilization
-      FROM storage_locations l WHERE l.organization_id = ${org}::uuid AND l.level = 'BIN' ${this.scope(actor, 'l.warehouse_id', warehouseId)}`;
+      WITH slotted AS (
+        SELECT DISTINCT ON (sl.sku_id, sl.warehouse_id) sl.sku_id, sl.warehouse_id FROM sku_locations sl
+        JOIN storage_locations l ON l.id = sl.location_id
+        WHERE l.organization_id = ${org}::uuid ${this.scope(actor, 'l.warehouse_id', warehouseId)}),
+      used AS (
+        SELECT COALESCE(SUM(b.on_hand + b.quarantined + b.damaged), 0) AS units FROM inventory_balances b
+        JOIN slotted s ON s.sku_id = b.sku_id AND s.warehouse_id = b.warehouse_id),
+      cap AS (
+        SELECT SUM(capacity_units) AS units FROM storage_locations l
+        WHERE l.organization_id = ${org}::uuid AND l.level = 'BIN' ${this.scope(actor, 'l.warehouse_id', warehouseId)})
+      SELECT CASE WHEN cap.units > 0 THEN used.units::float / cap.units END AS utilization FROM used, cap`;
     const [del] = await this.prisma.$queryRaw<any[]>`
       SELECT COUNT(*) FILTER (WHERE a.status = 'DELIVERED')::int AS delivered, COUNT(*) FILTER (WHERE a.status = 'FAILED')::int AS failed
       FROM delivery_assignments a WHERE a.organization_id = ${org}::uuid AND a.assigned_at >= ${today} ${this.scope(actor, 'a.dark_store_id', warehouseId)}`;
@@ -147,10 +156,11 @@ export class ReportsService {
                   WHEN t.expires_at <= CURRENT_DATE + 7 THEN '4-7 days'
                   WHEN t.expires_at <= CURRENT_DATE + 30 THEN '8-30 days'
                   WHEN t.expires_at IS NULL THEN 'no expiry' ELSE '30+ days' END AS bucket,
-             SUM(b.on_hand + b.expired + b.quarantined)::int AS units
+             SUM(b.on_hand + b.expired + b.quarantined)::int AS units,
+             MIN(COALESCE(t.expires_at, DATE '9999-12-31')) AS sort_key
       FROM inventory_batches t JOIN inventory_balances b ON b.batch_id = t.id
       WHERE t.organization_id = ${actor.organizationId}::uuid ${bs}
-      GROUP BY 1`;
+      GROUP BY 1 ORDER BY sort_key`;
     const movements = await this.prisma.$queryRaw<any[]>`
       SELECT movement_type AS type, COUNT(*)::int AS count, SUM(quantity)::int AS units
       FROM inventory_movements b WHERE b.organization_id = ${actor.organizationId}::uuid AND b.created_at >= now() - interval '7 days' ${bs}
@@ -172,7 +182,9 @@ export class ReportsService {
         (SELECT COUNT(*) FROM orders o WHERE o.dark_store_id = w.id AND o.placed_at >= ${r.from} AND o.placed_at < ${r.to})::int AS orders,
         (SELECT AVG(EXTRACT(EPOCH FROM (o.delivered_at - o.placed_at)) / 60) FROM orders o WHERE o.dark_store_id = w.id AND o.delivered_at >= ${r.from} AND o.delivered_at < ${r.to})::float AS "avgFulfillmentMinutes",
         (SELECT AVG(EXTRACT(EPOCH FROM (t.completed_at - t.started_at))) FROM picking_tasks t WHERE t.warehouse_id = w.id AND t.completed_at >= ${r.from} AND t.completed_at < ${r.to})::float AS "avgPickSeconds",
-        (SELECT SUM(occupied_units)::float / NULLIF(SUM(capacity_units), 0) FROM storage_locations l WHERE l.warehouse_id = w.id AND l.level = 'BIN') AS utilization,
+        ((SELECT SUM(b.on_hand + b.quarantined + b.damaged) FROM inventory_balances b
+           WHERE b.warehouse_id = w.id AND EXISTS (SELECT 1 FROM sku_locations sl WHERE sl.sku_id = b.sku_id AND sl.warehouse_id = w.id))::float
+         / NULLIF((SELECT SUM(capacity_units) FROM storage_locations l WHERE l.warehouse_id = w.id AND l.level = 'BIN'), 0)) AS utilization,
         (SELECT COUNT(*) FROM goods_receipts g WHERE g.warehouse_id = w.id AND g.created_at >= ${r.from} AND g.created_at < ${r.to})::int AS receipts
       FROM warehouses w WHERE w.organization_id = ${actor.organizationId}::uuid AND w.deleted_at IS NULL ${this.scope(actor, 'w.id', r.warehouseId)}
       ORDER BY w.code`;
