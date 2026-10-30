@@ -3,6 +3,7 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuthGuard } from './common/auth.guard';
 import { CommonModule } from './common/common.module';
+import { RedisThrottlerStorage } from './common/redis-throttler.storage';
 import { GlobalExceptionFilter } from './common/errors';
 import { RequestIdMiddleware } from './common/request-id.middleware';
 import { MetricsMiddleware, OpsController } from './metrics';
@@ -23,7 +24,10 @@ import { IntelligenceModule } from './modules/intelligence/intelligence.module';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: Number(process.env.RATE_LIMIT_PER_MINUTE ?? 600) }]),
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 60_000, limit: Number(process.env.RATE_LIMIT_PER_MINUTE ?? 600) }],
+      storage: process.env.REDIS_URL ? new RedisThrottlerStorage(process.env.REDIS_URL) : undefined,
+    }),
     CommonModule,
     AuthModule,
     UsersModule,
