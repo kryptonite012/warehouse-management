@@ -35,7 +35,17 @@ export class StoreAllocationService {
       where: { organizationId, type: 'DARK_STORE', status: 'ACTIVE', deletedAt: null, darkStore: { acceptingOrders: true } },
       include: { darkStore: true },
     });
+    // A store that runs an edge agent but has not been heard from recently is treated as
+    // disconnected: it cannot pick/pack/report reliably, so new orders are routed elsewhere.
+    const offlineAfter = new Date(Date.now() - Number(process.env.EDGE_OFFLINE_MINUTES ?? 5) * 60_000);
+    const devices = await this.prisma.edgeDevice.groupBy({
+      by: ['warehouseId'],
+      where: { warehouseId: { in: stores.map((s) => s.id) }, active: true },
+      _max: { lastSeenAt: true },
+    });
+    const disconnected = new Set(devices.filter((d) => !d._max.lastSeenAt || d._max.lastSeenAt < offlineAfter).map((d) => d.warehouseId));
     return stores
+      .filter((s) => !disconnected.has(s.id))
       .map((s) => {
         const distanceKm =
           dest.latitude != null && dest.longitude != null && s.latitude != null && s.longitude != null
