@@ -16,3 +16,6 @@ apps/edge-agent/*.db
 infrastructure/nginx/certs/*.pem
 infrastructure/nginx/certs/*.key
 backups/
+infrastructure/docker/certs/*.crt
+infrastructure/nginx/certs/*.crt
+dump.rdb
