@@ -1,4 +1,4 @@
-import { Controller, Get, Header, Injectable, NestMiddleware } from '@nestjs/common';
+import { Controller, Get, Header, Injectable, NestMiddleware, ServiceUnavailableException } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import { NextFunction, Request, Response } from 'express';
 import { collectDefaultMetrics, Counter, Histogram, Registry } from 'prom-client';
@@ -54,7 +54,11 @@ export class OpsController {
   @Public() @Get('health/ready')
   async ready() {
     const started = Date.now();
-    await this.prisma.$queryRaw`SELECT 1`;
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
+    } catch {
+      throw new ServiceUnavailableException({ code: 'NOT_READY', message: 'database unavailable' });
+    }
     return { status: 'ok', database: { status: 'up', latencyMs: Date.now() - started } };
   }
 }
