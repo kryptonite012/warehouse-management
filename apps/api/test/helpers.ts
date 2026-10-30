@@ -19,7 +19,7 @@ export interface World {
 
 export async function createWorld(): Promise<World> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-  const app = moduleRef.createNestApplication();
+  const app = moduleRef.createNestApplication({ rawBody: true });
   configureApp(app);
   await app.init();
   const prisma = new PrismaClient();
