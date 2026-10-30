@@ -172,7 +172,8 @@ export class OrdersService {
       where: { orderId: id }, orderBy: { assignedAt: 'desc' },
       include: { rider: { select: { fullName: true, phone: actor.kind === 'customer' ? false : true, vehicleType: true } }, events: { orderBy: { createdAt: 'asc' } } },
     });
-    return { ...order, delivery };
+    // The handover OTP is shown to the customer only; staff and riders must obtain it at the door.
+    return { ...order, deliveryOtp: actor.kind === 'customer' ? order.deliveryOtp : null, delivery };
   }
 
   async history(actor: AuthContext, id: string) {
