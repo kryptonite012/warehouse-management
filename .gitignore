@@ -19,3 +19,4 @@ backups/
 infrastructure/docker/certs/*.crt
 infrastructure/nginx/certs/*.crt
 dump.rdb
+*.tsbuildinfo
