@@ -16,6 +16,9 @@ import { ProcurementModule } from './modules/procurement/procurement.module';
 import { CommerceModule } from './modules/commerce/commerce.module';
 import { FulfillmentModule } from './modules/fulfillment/fulfillment.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
+import { ReportsModule } from './modules/reports/reports.module';
+import { GovernanceModule } from './modules/governance/governance.module';
+import { SyncModule } from './modules/sync/sync.module';
 
 @Module({
   imports: [
@@ -31,6 +34,9 @@ import { DeliveryModule } from './modules/delivery/delivery.module';
     CommerceModule,
     FulfillmentModule,
     DeliveryModule,
+    ReportsModule,
+    GovernanceModule,
+    SyncModule,
   ],
   controllers: [OpsController],
   providers: [
