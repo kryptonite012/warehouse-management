@@ -14,6 +14,8 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { ProcurementModule } from './modules/procurement/procurement.module';
 import { CommerceModule } from './modules/commerce/commerce.module';
+import { FulfillmentModule } from './modules/fulfillment/fulfillment.module';
+import { DeliveryModule } from './modules/delivery/delivery.module';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { CommerceModule } from './modules/commerce/commerce.module';
     InventoryModule,
     ProcurementModule,
     CommerceModule,
+    FulfillmentModule,
+    DeliveryModule,
   ],
   controllers: [OpsController],
   providers: [
