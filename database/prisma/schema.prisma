@@ -6,7 +6,10 @@
 //  - inventory_movements is append-only (enforced by a trigger in migration 0002).
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // Engines for local dev and the Debian-based container image are bundled at build time,
+  // so nothing is downloaded at runtime on the private network.
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
