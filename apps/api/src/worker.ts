@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { hostname } from 'os';
 import { AppModule } from './app.module';
+import { OutboxService } from './common/outbox.service';
 import { PrismaService } from './common/prisma.service';
 import { InventoryService } from './modules/inventory/inventory.service';
 import { ReservationService } from './modules/inventory/reservation.service';
@@ -33,8 +34,10 @@ async function main() {
   const reservations = app.get(ReservationService);
   const inventory = app.get(InventoryService);
   const orders = app.get(OrdersService);
+  const outbox = app.get(OutboxService);
 
   const jobs: Job[] = [
+    { name: 'outbox.relay', everySeconds: 5, run: () => outbox.relay() },
     { name: 'orders.cancel_unpaid', everySeconds: 60, run: () => orders.cancelStaleUnpaid() },
     { name: 'reservations.expire', everySeconds: 60, run: () => reservations.expireDue() },
     { name: 'inventory.expiry_sweep', everySeconds: 3600, run: () => inventory.sweepExpiredBatches() },

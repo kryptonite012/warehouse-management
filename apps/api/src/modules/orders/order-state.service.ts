@@ -2,11 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { OrderStatus } from '@prisma/client';
 import { AuthContext } from '../../common/auth-context';
 import { Conflict, NotFound } from '../../common/errors';
+import { OutboxService } from '../../common/outbox.service';
 import { Tx } from '../../common/prisma.service';
 import { canTransition } from './order-state';
 
 @Injectable()
 export class OrderStateService {
+  constructor(private readonly outbox: OutboxService) {}
+
   /**
    * Compare-and-set transition. Validates against the state machine, then updates
    * only if the row is still in the expected status; records history in the same tx.
@@ -35,6 +38,9 @@ export class OrderStateService {
         orderId, fromStatus: order.status, toStatus: to, actorType: actor.kind.toUpperCase(),
         actorId: actor.kind === 'system' ? null : actor.id, reason, event,
       },
+    });
+    await this.outbox.emit(tx, `order.${to.toLowerCase()}`, orderId, {
+      orderId, orderNumber: order.orderNumber, darkStoreId: order.darkStoreId, customerId: order.customerId, from: order.status, to, event, reason,
     });
     return { from: order.status, to };
   }

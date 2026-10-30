@@ -138,3 +138,25 @@ describe('Commerce: orders, state machine and payments', () => {
     await picker.call('get', '/orders').expect(403);
   });
 });
+
+describe('Transactional outbox', () => {
+  let w: World;
+  beforeAll(async () => { w = await createWorld(); });
+  afterAll(async () => closeWorld(w));
+
+  it('writes one event per committed order transition and none for rolled-back ones', async () => {
+    const orgCode = (await w.prisma.organization.findUniqueOrThrow({ where: { id: w.orgId } })).code;
+    const store = await warehouse(w);
+    const s = await sku(w);
+    await stock(w, store.id, s.id, 1);
+    const reg = await w.http().post('/api/v1/customers/register').send({ organizationCode: orgCode, fullName: 'Ox', phone: `6${Date.now() % 1e9}`.padEnd(10, '1'), password: PASSWORD }).expect(201);
+    const auth = { Authorization: `Bearer ${reg.body.accessToken}` };
+    const addr = await w.http().post('/api/v1/customers/addresses').set(auth).send({ line1: 'x road', city: 'B', state: 'KA', postalCode: '560038' }).expect(201);
+    const ok = await w.http().post('/api/v1/orders').set(auth).send({ addressId: addr.body.id, items: [{ skuId: s.id, quantity: 1 }], paymentMethod: 'COD', idempotencyKey: key() }).expect(201);
+    // This one fails on stock -> the whole transaction, including its outbox rows, rolls back.
+    await w.http().post('/api/v1/orders').set(auth).send({ addressId: addr.body.id, items: [{ skuId: s.id, quantity: 1 }], paymentMethod: 'COD', idempotencyKey: key() }).expect(409);
+    const events = await w.prisma.outboxEvent.findMany({ where: { aggregateId: ok.body.id }, orderBy: { id: 'asc' } });
+    expect(events.map((e) => e.topic)).toEqual(['order.created', 'order.inventory_reserved', 'order.accepted']);
+    expect(await w.prisma.outboxEvent.count({ where: { topic: 'order.created', aggregateId: { not: ok.body.id }, payload: { path: ['darkStoreId'], equals: store.id } } })).toBe(0);
+  });
+});

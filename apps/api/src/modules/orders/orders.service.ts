@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OrderStatus, Prisma } from '@prisma/client';
 import { AuditService } from '../../common/audit.service';
+import { OutboxService } from '../../common/outbox.service';
 import { assertWarehouseAccess, AuthContext, hasPermission, SYSTEM_ACTOR, warehouseScopeFilter } from '../../common/auth-context';
 import { nextDocNumber } from '../../common/doc-number';
 import { Conflict, DomainError, Forbidden, NotFound } from '../../common/errors';
@@ -37,6 +38,7 @@ export class OrdersService {
     private readonly ledger: LedgerService,
     private readonly gateway: PaymentGateway,
     private readonly audit: AuditService,
+    private readonly outbox: OutboxService,
   ) {}
 
   /**
@@ -112,6 +114,9 @@ export class OrdersService {
             items: { create: orderItems },
             statusHistory: { create: { toStatus: 'CREATED', actorType: 'CUSTOMER', actorId: actor.id, event: 'order.placed' } },
           },
+        });
+        await this.outbox.emit(tx, 'order.created', order.id, {
+          orderId: order.id, orderNumber: order.orderNumber, darkStoreId: store.id, customerId: actor.id, total: Number(order.total), paymentMethod: dto.paymentMethod,
         });
         const reservation = await this.reservations.reserve(tx, actor, {
           organizationId: actor.organizationId, warehouseId: store.id, orderId: order.id, idempotencyKey: `order:${order.id}`, items,
