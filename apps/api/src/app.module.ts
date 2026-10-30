@@ -11,6 +11,7 @@ import { OrganizationModule } from './modules/organization/organization.module';
 import { UsersModule } from './modules/users/users.module';
 import { WarehousesModule } from './modules/warehouses/warehouses.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
     OrganizationModule,
     WarehousesModule,
     CatalogModule,
+    InventoryModule,
   ],
   controllers: [OpsController],
   providers: [
