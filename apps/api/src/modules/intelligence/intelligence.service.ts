@@ -163,18 +163,16 @@ export class IntelligenceService {
       const position = s.available + s.in_transit;
       const f = forecasts.get(s.sku_id);
       const fresh = f && Date.now() - new Date(f.lastUpdate).getTime() < 3 * 86_400_000;
-      let qty = 0;
-      let basis = 'RULE_REORDER_POINT';
-      let explanation: Record<string, unknown>;
-      if (fresh) {
-        basis = 'FORECAST';
-        const demand = f!.predictedOutcome.range[1]; // cover the upper bound over the horizon
-        qty = Math.max(0, Math.ceil(demand - position));
-        explanation = { rule: 'cover upper forecast bound over horizon', forecastUpper: demand, horizonDays: f!.predictedOutcome.horizonDays, position, forecastMethod: f!.method };
-      } else {
-        if (position <= s.reorder_point) qty = Math.max(s.reorder_qty, s.reorder_point - position);
-        explanation = { rule: 'available + in_transit <= reorder_point => order reorder_qty', position, reorderPoint: s.reorder_point, reorderQty: s.reorder_qty };
-      }
+      // Reorder-point rule is the safety floor; a fresh forecast can raise the quantity, never lower it.
+      const ruleQty = position <= s.reorder_point ? Math.max(s.reorder_qty, s.reorder_point - position) : 0;
+      const demand = fresh ? f!.predictedOutcome.range[1] : 0; // cover the upper forecast bound over the horizon
+      const forecastQty = fresh ? Math.max(0, Math.ceil(demand - position)) : 0;
+      const qty = Math.max(ruleQty, forecastQty);
+      const basis = forecastQty > ruleQty ? 'FORECAST' : 'RULE_REORDER_POINT';
+      const explanation: Record<string, unknown> = {
+        position, reorderPoint: s.reorder_point, reorderQty: s.reorder_qty, ruleQty,
+        ...(fresh ? { forecastUpper: demand, horizonDays: f!.predictedOutcome.horizonDays, forecastMethod: f!.method, forecastQty } : { forecast: 'none recent' }),
+      };
       if (qty > 0) {
         recs.push(
           await this.prisma.replenishmentRecommendation.create({
