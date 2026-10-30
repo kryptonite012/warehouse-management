@@ -2,11 +2,11 @@
  * Seeds permissions, default roles and a bootstrap organization + super admin.
  * With SEED_DEMO=true it also creates clearly-labelled DEMO sites, catalog and stock.
  *
- *   SEED_ADMIN_EMAIL=admin@example.com SEED_ADMIN_PASSWORD='...' npm run db:seed
+ *   SEED_ADMIN_EMAIL=admin@example.com SEED_ADMIN_PASSWORD='...' npm run db:seed   (or: docker compose run --rm api seed)
  */
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-import { ALL_PERMISSIONS, DEFAULT_ROLES } from '../../apps/api/src/common/permissions';
+import { ALL_PERMISSIONS, DEFAULT_ROLES } from './common/permissions';
 
 const prisma = new PrismaClient();
 

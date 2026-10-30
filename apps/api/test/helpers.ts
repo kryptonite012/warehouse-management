@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
 import request from 'supertest';
-import { seedOrganization, seedPermissions } from '../../../database/seed/seed';
+import { seedOrganization, seedPermissions } from '../src/seed';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/bootstrap';
 
