@@ -1,0 +1,9 @@
+# Configure a receiver reachable from your private network (SMTP relay, chat webhook, pager).
+route:
+  receiver: ops
+  group_by: [alertname]
+  repeat_interval: 4h
+receivers:
+  - name: ops
+    # webhook_configs:
+    #   - url: http://internal-alert-gateway:8080/alerts
