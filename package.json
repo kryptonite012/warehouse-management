@@ -16,7 +16,7 @@
     "db:generate": "prisma generate --schema database/prisma/schema.prisma",
     "db:migrate": "prisma migrate deploy --schema database/prisma/schema.prisma",
     "db:migrate:dev": "prisma migrate dev --schema database/prisma/schema.prisma",
-    "db:seed": "node database/seed/seed.js",
+    "db:seed": "ts-node --transpile-only database/seed/seed.ts",
     "test": "npm test -w @quickstore/api",
     "lint": "npm run lint --workspaces --if-present"
   },
