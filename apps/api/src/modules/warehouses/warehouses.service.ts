@@ -139,6 +139,8 @@ export class WarehousesService {
     const temp = dto.temperatureZone ?? 'AMBIENT';
     let created = 0;
     let seq = 0;
+    // Zones are walked in creation order; within a zone the route snakes through aisles.
+    const zoneIndex = await this.prisma.storageLocation.count({ where: { warehouseId, level: 'ZONE' } });
     await this.prisma.$transaction(
       async (tx) => {
         const zone = await this.insertLocation(tx, actor, wh, { level: 'ZONE', code: dto.zoneCode, temperatureZone: temp });
@@ -155,7 +157,7 @@ export class WarehousesService {
               for (let b = 1; b <= dto.binsPerShelf; b++) {
                 // Serpentine pick sequence: odd aisles walk up, even aisles walk down.
                 const rackOrder = a % 2 === 1 ? r : dto.racksPerAisle - r + 1;
-                seq = ((a * 1000 + rackOrder) * 100 + s) * 100 + b;
+                seq = zoneIndex * 60_000_000 + a * 1_000_000 + rackOrder * 10_000 + s * 100 + b;
                 await this.insertLocation(tx, actor, wh, {
                   level: 'BIN', code: String(b).padStart(2, '0'), parentId: shelf.id, temperatureZone: temp,
                   capacityUnits: dto.binCapacityUnits, pickSequence: seq,
