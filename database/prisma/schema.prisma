@@ -1071,6 +1071,8 @@ model Order {
   idempotencyKey    String        @map("idempotency_key")
   reservationId     String?       @map("reservation_id") @db.Uuid
   cancelReason      String?       @map("cancel_reason")
+  /// 4-digit code shown only to the customer; the rider must collect it at handover.
+  deliveryOtp       String?       @map("delivery_otp")
   placedAt          DateTime      @default(now()) @map("placed_at") @db.Timestamptz(3)
   deliveredAt       DateTime?     @map("delivered_at") @db.Timestamptz(3)
   version           Int           @default(1)
@@ -1211,6 +1213,7 @@ model PickingTask {
   taskNumber     String     @unique @map("task_number")
   status         TaskStatus @default(PENDING)
   mode           String     @default("SINGLE_ORDER")
+  waveId         String?    @map("wave_id") @db.Uuid
   assignedToId   String?    @map("assigned_to_id") @db.Uuid
   startedAt      DateTime?  @map("started_at") @db.Timestamptz(3)
   completedAt    DateTime?  @map("completed_at") @db.Timestamptz(3)
@@ -1220,6 +1223,7 @@ model PickingTask {
 
   @@index([warehouseId, status])
   @@index([orderId])
+  @@index([waveId])
   @@map("picking_tasks")
 }
 
