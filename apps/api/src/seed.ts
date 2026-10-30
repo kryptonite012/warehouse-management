@@ -10,22 +10,22 @@ import { ALL_PERMISSIONS, DEFAULT_ROLES } from './common/permissions';
 
 const prisma = new PrismaClient();
 
+/** Idempotent and safe to run concurrently (single INSERT … ON CONFLICT DO NOTHING). */
 export async function seedPermissions(db: PrismaClient) {
-  for (const code of ALL_PERMISSIONS) {
-    await db.permission.upsert({ where: { code }, create: { code, module: code.split('.')[0] }, update: {} });
-  }
+  await db.permission.createMany({
+    data: ALL_PERMISSIONS.map((code) => ({ code, module: code.split('.')[0] })),
+    skipDuplicates: true,
+  });
 }
 
 export async function seedOrganization(db: PrismaClient, code: string, name: string) {
-  const org = await db.organization.upsert({ where: { code }, create: { code, name }, update: {} });
+  await db.organization.createMany({ data: [{ code, name }], skipDuplicates: true });
+  const org = await db.organization.findUniqueOrThrow({ where: { code } });
   const perms = await db.permission.findMany();
   const byCode = new Map(perms.map((p) => [p.code, p.id]));
   for (const [roleCode, def] of Object.entries(DEFAULT_ROLES)) {
-    const role = await db.role.upsert({
-      where: { organizationId_code: { organizationId: org.id, code: roleCode } },
-      create: { organizationId: org.id, code: roleCode, name: def.name, isSystem: true },
-      update: {},
-    });
+    await db.role.createMany({ data: [{ organizationId: org.id, code: roleCode, name: def.name, isSystem: true }], skipDuplicates: true });
+    const role = await db.role.findUniqueOrThrow({ where: { organizationId_code: { organizationId: org.id, code: roleCode } } });
     await db.rolePermission.createMany({
       data: def.permissions.map((p) => ({ roleId: role.id, permissionId: byCode.get(p)! })),
       skipDuplicates: true,
