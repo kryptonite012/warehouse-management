@@ -7,3 +7,7 @@ process.env.EXPOSE_RESET_TOKEN = 'true';
 process.env.PAYMENT_WEBHOOK_SECRET = 'whsec_test_secret';
 process.env.PAYMENT_PROVIDER = 'generic-hmac';
 process.env.AUTH_RATE_LIMIT_PER_MINUTE = '100000';
+// Prisma auto-loads the repository .env; keep tests hermetic and in-process.
+process.env.REDIS_URL = '';
+process.env.RABBITMQ_URL = '';
+process.env.AI_ENGINE_URL = process.env.TEST_AI_ENGINE_URL ?? '';

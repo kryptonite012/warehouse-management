@@ -116,3 +116,24 @@ describe('Reports and concurrency policy', () => {
     expect(logs.body.data.length).toBeGreaterThanOrEqual(1);
   });
 });
+
+describe('Disconnected stores are not offered to customers', () => {
+  let w: World;
+  beforeAll(async () => { w = await createWorld(); });
+  afterAll(async () => closeWorld(w));
+
+  it('skips a dark store whose edge agent has gone silent', async () => {
+    const orgCode = (await w.prisma.organization.findUniqueOrThrow({ where: { id: w.orgId } })).code;
+    const store = await warehouse(w);
+    await w.prisma.darkStore.update({ where: { id: store.id }, data: { servicePostalCodes: ['560111'] } });
+    const mgr = await employee(w, ['DARK_STORE_MANAGER'], { warehouseIds: [store.id] });
+    const d = await mgr.call('post', '/sync/devices').send({ warehouseId: store.id, name: 'tablet', allowedOps: ['PICK_SCAN'] }).expect(201);
+    await w.http().get('/api/v1/sync/snapshot').set('x-device-token', d.body.token).expect(200);
+    const online = await w.http().get(`/api/v1/storefront/serviceability?postalCode=560111&org=${orgCode}`).expect(200);
+    expect(online.body.stores.map((s: any) => s.id)).toContain(store.id);
+
+    await w.prisma.edgeDevice.updateMany({ where: { warehouseId: store.id }, data: { lastSeenAt: new Date(Date.now() - 3_600_000) } });
+    const offline = await w.http().get(`/api/v1/storefront/serviceability?postalCode=560111&org=${orgCode}`).expect(200);
+    expect(offline.body.serviceable).toBe(false);
+  });
+});
