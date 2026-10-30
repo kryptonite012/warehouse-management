@@ -24,9 +24,12 @@ import { IntelligenceModule } from './modules/intelligence/intelligence.module';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot({
-      throttlers: [{ ttl: 60_000, limit: Number(process.env.RATE_LIMIT_PER_MINUTE ?? 600) }],
-      storage: process.env.REDIS_URL ? new RedisThrottlerStorage(process.env.REDIS_URL) : undefined,
+    // Factory so every application instance owns (and closes) its own Redis connection.
+    ThrottlerModule.forRootAsync({
+      useFactory: () => ({
+        throttlers: [{ ttl: 60_000, limit: Number(process.env.RATE_LIMIT_PER_MINUTE ?? 600) }],
+        storage: process.env.REDIS_URL ? new RedisThrottlerStorage(process.env.REDIS_URL) : undefined,
+      }),
     }),
     CommonModule,
     AuthModule,
