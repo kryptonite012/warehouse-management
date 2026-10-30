@@ -7,6 +7,7 @@ import { OutboxService } from './common/outbox.service';
 import { PrismaService } from './common/prisma.service';
 import { InventoryService } from './modules/inventory/inventory.service';
 import { ReservationService } from './modules/inventory/reservation.service';
+import { CustomersService } from './modules/customers/customers.service';
 import { OrdersService } from './modules/orders/orders.service';
 
 interface Job {
@@ -35,6 +36,7 @@ async function main() {
   const inventory = app.get(InventoryService);
   const orders = app.get(OrdersService);
   const outbox = app.get(OutboxService);
+  const customers = app.get(CustomersService);
 
   const jobs: Job[] = [
     { name: 'outbox.relay', everySeconds: 5, run: () => outbox.relay() },
@@ -42,6 +44,7 @@ async function main() {
     { name: 'reservations.expire', everySeconds: 60, run: () => reservations.expireDue() },
     { name: 'inventory.expiry_sweep', everySeconds: 3600, run: () => inventory.sweepExpiredBatches() },
     { name: 'inventory.low_stock_alerts', everySeconds: 900, run: () => inventory.raiseLowStockAlerts() },
+    { name: 'privacy.anonymise_customers', everySeconds: 86_400, run: () => customers.anonymiseInactive() },
   ];
 
   let stopping = false;

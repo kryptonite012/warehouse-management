@@ -91,6 +91,38 @@ export class CustomersService {
     return a;
   }
 
+  /**
+   * Privacy retention: customers with no account or order activity for the organization's
+   * `privacy.customer_retention_days` are anonymised. Orders keep their own address snapshot.
+   */
+  async anonymiseInactive() {
+    const settings = await this.prisma.systemSetting.findMany({ where: { key: 'privacy.customer_retention_days' } });
+    let anonymised = 0;
+    for (const s of settings) {
+      const cutoff = new Date(Date.now() - Number(s.value) * 86_400_000);
+      const stale = await this.prisma.customer.findMany({
+        where: {
+          organizationId: s.organizationId!, status: { not: 'ANONYMISED' }, updatedAt: { lt: cutoff },
+          orders: { none: { placedAt: { gte: cutoff } } },
+        },
+        select: { id: true },
+        take: 500,
+      });
+      for (const c of stale) {
+        await this.prisma.$transaction([
+          this.prisma.customerAddress.deleteMany({ where: { customerId: c.id } }),
+          this.prisma.cart.deleteMany({ where: { customerId: c.id } }),
+          this.prisma.customer.update({
+            where: { id: c.id },
+            data: { fullName: 'Anonymised customer', email: null, phone: `anon-${c.id}`, passwordHash: '!', status: 'ANONYMISED' },
+          }),
+        ]);
+        anonymised++;
+      }
+    }
+    return { anonymised };
+  }
+
   private token(customerId: string, organizationId: string) {
     return {
       accessToken: this.tokens.signAccess({ sub: customerId, org: organizationId, kind: 'customer' }),

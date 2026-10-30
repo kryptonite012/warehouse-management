@@ -160,3 +160,21 @@ describe('Transactional outbox', () => {
     expect(await w.prisma.outboxEvent.count({ where: { topic: 'order.created', aggregateId: { not: ok.body.id }, payload: { path: ['darkStoreId'], equals: store.id } } })).toBe(0);
   });
 });
+
+describe('Privacy retention', () => {
+  let w: World;
+  beforeAll(async () => { w = await createWorld(); });
+  afterAll(async () => closeWorld(w));
+
+  it('anonymises customers inactive beyond the configured retention period', async () => {
+    const { CustomersService } = await import('../src/modules/customers/customers.service');
+    const old = await w.prisma.customer.create({ data: { organizationId: w.orgId, fullName: 'Old Customer', phone: `4${Date.now() % 1e9}`, email: 'old@x.io', passwordHash: 'h' } });
+    await w.prisma.customerAddress.create({ data: { customerId: old.id, line1: 'a', city: 'b', state: 'c', postalCode: '560001' } });
+    await w.prisma.$executeRaw`UPDATE customers SET updated_at = now() - interval '400 days' WHERE id = ${old.id}::uuid`;
+    await w.prisma.systemSetting.create({ data: { organizationId: w.orgId, key: 'privacy.customer_retention_days', value: 365 } });
+    await w.app.get(CustomersService).anonymiseInactive();
+    const after = await w.prisma.customer.findUniqueOrThrow({ where: { id: old.id }, include: { addresses: true } });
+    expect(after).toMatchObject({ fullName: 'Anonymised customer', email: null, status: 'ANONYMISED' });
+    expect(after.addresses).toHaveLength(0);
+  });
+});
