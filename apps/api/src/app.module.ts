@@ -13,6 +13,7 @@ import { WarehousesModule } from './modules/warehouses/warehouses.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { ProcurementModule } from './modules/procurement/procurement.module';
+import { CommerceModule } from './modules/commerce/commerce.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ProcurementModule } from './modules/procurement/procurement.module';
     CatalogModule,
     InventoryModule,
     ProcurementModule,
+    CommerceModule,
   ],
   controllers: [OpsController],
   providers: [
