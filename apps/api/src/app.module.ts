@@ -19,6 +19,7 @@ import { DeliveryModule } from './modules/delivery/delivery.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { GovernanceModule } from './modules/governance/governance.module';
 import { SyncModule } from './modules/sync/sync.module';
+import { IntelligenceModule } from './modules/intelligence/intelligence.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { SyncModule } from './modules/sync/sync.module';
     ReportsModule,
     GovernanceModule,
     SyncModule,
+    IntelligenceModule,
   ],
   controllers: [OpsController],
   providers: [
