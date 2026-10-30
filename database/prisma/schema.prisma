@@ -1552,3 +1552,14 @@ model BackupHistory {
 
   @@map("backup_history")
 }
+
+/// Lease table so only one worker replica runs a given periodic job at a time.
+model JobLease {
+  name        String   @id
+  lockedUntil DateTime @map("locked_until") @db.Timestamptz(3)
+  lockedBy    String?  @map("locked_by")
+  lastRunAt   DateTime? @map("last_run_at") @db.Timestamptz(3)
+  lastResult  Json?    @map("last_result")
+
+  @@map("job_leases")
+}
