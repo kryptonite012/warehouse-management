@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 220 20% 97%;
+  --panel: 0 0% 100%;
+  --muted: 220 14% 94%;
+  --border: 220 13% 88%;
+  --fg: 222 47% 11%;
+  --subtle: 220 9% 42%;
+  --brand: 142 72% 32%;
+  --brand-fg: 0 0% 100%;
+  --ok: 142 64% 34%;
+  --warn: 32 95% 40%;
+  --bad: 0 72% 46%;
+}
+
+.dark {
+  --bg: 222 30% 7%;
+  --panel: 222 26% 11%;
+  --muted: 222 20% 16%;
+  --border: 222 16% 22%;
+  --fg: 210 30% 95%;
+  --subtle: 215 14% 64%;
+  --brand: 142 60% 45%;
+  --brand-fg: 222 47% 8%;
+  --ok: 142 55% 50%;
+  --warn: 38 92% 56%;
+  --bad: 0 80% 62%;
+}
+
+html, body, #root { height: 100%; }
+body { @apply bg-bg text-fg antialiased; font-feature-settings: 'tnum' 1; }
+:focus-visible { @apply outline-none ring-2 ring-brand ring-offset-2 ring-offset-bg; }
