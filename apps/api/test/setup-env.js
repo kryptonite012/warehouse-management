@@ -1,0 +1,9 @@
+process.env.DATABASE_URL =
+  process.env.TEST_DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5432/quickstore_test?schema=public';
+process.env.JWT_ACCESS_SECRET = 'test-secret-test-secret-test-secret-0123456789';
+process.env.BCRYPT_COST = '4';
+process.env.RATE_LIMIT_PER_MINUTE = '100000';
+process.env.EXPOSE_RESET_TOKEN = 'true';
+process.env.PAYMENT_WEBHOOK_SECRET = 'whsec_test_secret';
+process.env.PAYMENT_PROVIDER = 'generic-hmac';
+process.env.AUTH_RATE_LIMIT_PER_MINUTE = '100000';

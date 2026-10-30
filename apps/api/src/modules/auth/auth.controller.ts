@@ -8,6 +8,9 @@ import { PrismaService } from '../../common/prisma.service';
 import { ForgotPasswordDto, LoginDto, RefreshDto, ResetPasswordDto } from './auth.dto';
 import { AuthService } from './auth.service';
 
+// Per-IP limits on credential endpoints; AUTH_RATE_LIMIT_PER_MINUTE scales them for load tests.
+const AUTH_LIMIT = Number(process.env.AUTH_RATE_LIMIT_PER_MINUTE ?? 10);
+
 const client = (req: Request) => ({ ip: req.ip, userAgent: req.headers['user-agent'] });
 
 @ApiTags('auth')
@@ -16,7 +19,7 @@ export class AuthController {
   constructor(private readonly auth: AuthService, private readonly prisma: PrismaService) {}
 
   @Public()
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Throttle({ default: { limit: AUTH_LIMIT, ttl: 60_000 } })
   @Post('login')
   @HttpCode(200)
   login(@Body() dto: LoginDto, @Req() req: Request) {
@@ -24,7 +27,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Throttle({ default: { limit: AUTH_LIMIT * 3, ttl: 60_000 } })
   @Post('refresh')
   @HttpCode(200)
   refresh(@Body() dto: RefreshDto, @Req() req: Request) {
@@ -39,7 +42,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Throttle({ default: { limit: Math.ceil(AUTH_LIMIT / 2), ttl: 60_000 } })
   @Post('forgot-password')
   @HttpCode(202)
   forgot(@Body() dto: ForgotPasswordDto) {
@@ -47,7 +50,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Throttle({ default: { limit: Math.ceil(AUTH_LIMIT / 2), ttl: 60_000 } })
   @Post('reset-password')
   @HttpCode(200)
   reset(@Body() dto: ResetPasswordDto) {
