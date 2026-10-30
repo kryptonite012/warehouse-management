@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { OrganizationModule } from './modules/organization/organization.module';
 import { UsersModule } from './modules/users/users.module';
 import { WarehousesModule } from './modules/warehouses/warehouses.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { WarehousesModule } from './modules/warehouses/warehouses.module';
     UsersModule,
     OrganizationModule,
     WarehousesModule,
+    CatalogModule,
   ],
   controllers: [OpsController],
   providers: [
