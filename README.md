@@ -21,18 +21,30 @@ working when their link to head office drops.
 | **Edge agent** | Go service per dark store with a durable offline journal |
 | **Ops** | Nginx (TLS), Prometheus, Alertmanager, Grafana, Loki, encrypted backups with restore verification |
 
-## Quick start (Docker)
+## Quick start (one command)
+
+You need Docker Desktop (or Docker Engine + Compose v2) and Git. On Windows, use Git Bash or WSL.
 
 ```bash
-cp .env.example .env                   # replace every change-me value
-./scripts/generate-dev-certs.sh        # or install your own certificate
-docker compose up -d --build           # migrations + DB grants run before the API starts
-docker compose run --rm -e SEED_ADMIN_PASSWORD='Choose-a-Str0ng-one' -e SEED_DEMO=true api seed
+git clone https://github.com/kryptonite012/warehouse-management.git
+cd warehouse-management
+./start.sh
 ```
 
-* Admin console: `https://admin.quickstore.local` (`ADMIN_HOST`). Sign in as `admin@quickstore.local`.
-* Storefront: `https://shop.quickstore.local` (`SHOP_HOST`). Try PIN code `560038` with demo data.
+On the first run, `start.sh` generates random secrets in `.env`, creates a local TLS certificate,
+builds and starts every container, runs migrations, and creates an admin account with demo data.
+It then prints the URLs and the admin password. If ports 80/443 are busy it uses 8080/8443.
+
+Add this line to your hosts file once (the script reminds you):
+
+```
+127.0.0.1 admin.quickstore.local shop.quickstore.local
+```
+
+* Admin console: `https://admin.quickstore.local`. Sign in as `admin@quickstore.local` with the printed password.
+* Storefront: `https://shop.quickstore.local`. Use PIN code `560038` for the demo store.
 * API docs: `https://admin.quickstore.local/api/docs`.
+* Stop with `./start.sh --stop`; after pulling new code use `./start.sh --rebuild`.
 * Monitoring: `docker compose --profile monitoring up -d`, then Grafana on `127.0.0.1:3001`.
 
 Then exercise the whole business flow end to end through the API:
